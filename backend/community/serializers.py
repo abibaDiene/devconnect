@@ -5,8 +5,8 @@ class PostSerializer(serializers.ModelSerializer):
     reactions_count=serializers.IntegerField(source='reactions.count',read_only=True)
     class Meta:
         model=Post
-        fields=['id','author','content','created_at','updated_at','comments_count','reactions_count']
-        read_only_fields=['id','author','created_at','updated_at']
+        fields=['id','author','content','created_at','updated_at','comments_count','reactions_count','is_hidden']
+        read_only_fields=['id','author','created_at','updated_at','is_hidden']
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model=Comment
@@ -15,8 +15,8 @@ class CommentSerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model=Question
-        fields=['id','author','title','body','tags','accepted_answer','created_at']
-        read_only_fields=['id','author','accepted_answer','created_at']
+        fields=['id','author','title','body','tags','accepted_answer','created_at','is_hidden']
+        read_only_fields=['id','author','accepted_answer','created_at','is_hidden']
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model=Answer
@@ -40,4 +40,7 @@ class ReportSerializer(serializers.ModelSerializer):
     def validate(self,attrs):
         if bool(attrs.get('post')) == bool(attrs.get('question')):
             raise serializers.ValidationError('Signalez une publication OU une question.')
+        target=attrs.get('post') or attrs.get('question')
+        if target and target.is_hidden:
+            raise serializers.ValidationError('Ce contenu est déjà masqué.')
         return attrs

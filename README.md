@@ -72,3 +72,65 @@ Vite fait suivre `/api` à Django sur le port 8000, ce qui évite les appels cro
 ### Limitations actuelles
 
 La compilation, le démarrage Docker et les tests d'intégration ne sont pas garantis dans l'environnement de création. Les migrations ne sont pas incluses dans l'archive : la commande `makemigrations` ci-dessus est nécessaire une seule fois, avant le premier `up`. Compléter également les formulaires réponses/commentaires/candidatures, les contrôles de validation, la pagination et les tests avant déploiement.
+
+## Phase 7 — Recherche et filtres avancés
+
+- Barre de recherche serveur (temporisation de 350 ms) dans Publications, Questions, Projets et Communauté.
+- Questions : mots-clés, statut résolu/non résolu, tri chronologique. API facultative `tag=django` (correspondance exacte).
+- Projets : mots-clés, recrutement ouvert/fermé, tri chronologique. API facultative `technology=Django` (correspondance exacte).
+- Communauté : nom, bio, localisation ; compétence exacte ; tri alphabétique ou par inscription.
+- L'interface parcourt les pages de l'API pour ne pas limiter les recherches aux 20 premiers résultats. Pour un catalogue très important, introduire plus tard une pagination visible ou un défilement infini.
+- Aucune migration supplémentaire nécessaire (modèles inchangés).
+
+Pour tester : `docker compose up -d --build` puis `docker compose exec backend python manage.py test tests_api` et `cd frontend && npm install && npm run build && npm run dev`.
+
+Note : recherche de tags/technologies accessible côté API mais sans champ dédié dans l'interface pour cette version ; les recherches de compétences utilisent une correspondance exacte et sensible à la casse dans le champ `skills` JSON. Une normalisation des compétences/tags est recommandée ensuite.
+
+
+## Phase 8 — Modération
+
+- Membres connectés : bouton **Signaler** sur publications et questions.
+- Administrateurs (`is_staff=True`) : onglet **Modération**, liste des signalements, masquage ou rejet.
+- Les contenus masqués ne sont plus exposés aux membres ni aux visiteurs (les administrateurs peuvent encore les voir).
+- Gestion des utilisateurs (désactivation) via l'administration Django `/admin/`; endpoint staff `POST /api/users/{id}/set_active/` avec `{"is_active": false}`.
+- Les nouveaux champs `is_hidden` nécessitent une migration.
+
+### Mise à jour depuis la version précédente
+
+Sauvegarder le projet et la base avant de remplacer des fichiers, puis exécuter :
+
+```powershell
+docker compose up -d --build
+docker compose exec backend python manage.py makemigrations community
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser
+```
+
+La commande `createsuperuser` est à exécuter uniquement si aucun compte administrateur n'existe.
+
+Depuis `frontend` : `npm install`, `npm run build`, puis `npm run dev`.
+
+**Attention** : le développement n'a pas été validé de bout en bout en conteneurs ici.
+
+
+## Phase 9 et 10 — Sécurité, tests, UI mobile
+
+- Connexion et inscription protégées contre CSRF (le frontend initialise le cookie `/api/auth/csrf/`).
+- Limitation globale du débit des requêtes API et limitation renforcée connexion/inscription (en mémoire/cache local par défaut : utiliser Redis ou autre cache partagé en production).
+- Interdiction de commenter une publication masquée ou répondre à une question masquée.
+- Tests des autorisations, de la modération et du CSRF dans `backend/tests_security.py`.
+- Menu ouvrable au mobile, fermeture via un bouton/voile ; états de chargement, focus visible, contraste et support `prefers-reduced-motion`.
+
+### Vérifications (depuis la racine)
+
+```powershell
+docker compose up -d --build
+docker compose exec backend python manage.py check
+docker compose exec backend python manage.py test tests_api tests_security
+cd frontend
+npm install
+npm run build
+npm run dev
+```
+
+Attention : cette livraison n'est pas une validation de sécurité de production. À terminer avant l'ouverture : tests E2E navigateur, audit de dépendances, journalisation, vraie politique de sauvegarde, service ASGI/WSGI de production, proxy HTTPS et stockage de cache partagé pour les limites de débit.

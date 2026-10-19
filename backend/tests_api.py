@@ -30,3 +30,30 @@ class PermissionTests(TestCase):
         result=self.client_a.post(f"/api/applications/{response.data['id']}/decide/",{'status':'accepted'},format='json')
         self.assertEqual(result.status_code,200)
         self.assertEqual(result.data['status'],'accepted')
+
+
+class SearchFilterTests(TestCase):
+    def setUp(self):
+        self.alice=User.objects.create_user(username='alice',email='alice@demo.test',password='test-pass-1234',skills=['Python','Django'],bio='Backend')
+        self.bob=User.objects.create_user(username='bob',email='bob@demo.test',password='test-pass-1234',skills=['React'])
+        Question.objects.create(author=self.alice,title='API Django',body='Question backend',tags=['django'])
+        Question.objects.create(author=self.bob,title='React',body='Question frontend',tags=['react'])
+        Project.objects.create(owner=self.alice,name='API service',description='Backend API',technologies=['Django'],seeking_collaborators=True)
+        Project.objects.create(owner=self.bob,name='Site web',description='Frontend',technologies=['React'],seeking_collaborators=False)
+    def values(self,url):
+        response=self.client.get(url)
+        self.assertEqual(response.status_code,200)
+        return response.data['results']
+    def test_search_users_by_skill(self):
+        results=self.values('/api/users/?skill=Python')
+        self.assertEqual([x['username'] for x in results],['alice'])
+    def test_search_questions_by_tag_and_status(self):
+        results=self.values('/api/questions/?tag=django&status=unresolved')
+        self.assertEqual([x['title'] for x in results],['API Django'])
+        self.assertEqual(self.values('/api/questions/?status=resolved'),[])
+    def test_search_projects_by_technology_and_collaboration(self):
+        results=self.values('/api/projects/?technology=Django&collaboration=open')
+        self.assertEqual([x['name'] for x in results],['API service'])
+        self.assertEqual(self.values('/api/projects/?technology=Django&collaboration=closed'),[])
+    def test_no_results_for_unknown_keyword(self):
+        self.assertEqual(self.values('/api/posts/?search=introuvable'),[])

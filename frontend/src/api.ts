@@ -1,4 +1,4 @@
-export type User = {id:number;username:string;email:string;bio:string;location:string;skills:string[];github_url:string;linkedin_url:string;portfolio_url:string};
+export type User = {id:number;username:string;email:string;bio:string;location:string;skills:string[];github_url:string;linkedin_url:string;portfolio_url:string;is_staff?:boolean};
 export type Post = {id:number;author:number;content:string;created_at:string;comments_count:number;reactions_count:number};
 export type Question = {id:number;author:number;title:string;body:string;tags:string[];accepted_answer:number|null;created_at:string};
 export type Project = {id:number;owner:number;name:string;description:string;technologies:string[];github_url:string;demo_url:string;seeking_collaborators:boolean;created_at:string};
@@ -12,4 +12,20 @@ export async function request<T>(path:string,method='GET',body?:unknown):Promise
   if(response.status===204)return undefined as T;
   return response.json() as Promise<T>;
 }
-export async function list<T>(path:string):Promise<T[]>{const result=await request<List<T>|T[]>(path);return Array.isArray(result)?result:result.results;}
+export async function list<T>(path:string):Promise<T[]>{
+  const all:T[]=[];
+  let next:string|null='/api/'+path.replace(/^\//,'');
+  let pages=0;
+  while(next && pages<100){
+    // DRF pagination produces URLs; require them to remain on the same origin and under /api/.
+    const url:URL=new URL(next,window.location.origin);
+    if(url.hostname!==window.location.hostname || !url.pathname.startsWith('/api/')) throw new Error('Lien de pagination invalide');
+    const result=await request<List<T>|T[]>(url.pathname.slice(5)+url.search);
+    if(Array.isArray(result)){all.push(...result);break;}
+    all.push(...result.results);
+    next=result.next;
+    pages++;
+  }
+  return all;
+}
+

@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields=['id','date_joined']
 class MeSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
-        fields=UserSerializer.Meta.fields+['email']
+        fields=UserSerializer.Meta.fields+['email','is_staff']
 class RegisterSerializer(serializers.ModelSerializer):
     password=serializers.CharField(write_only=True,validators=[validate_password])
     class Meta:

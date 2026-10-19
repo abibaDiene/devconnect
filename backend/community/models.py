@@ -8,6 +8,7 @@ class TimeStamped(models.Model):
 class Post(TimeStamped):
     author=models.ForeignKey(User,on_delete=models.CASCADE,related_name='posts')
     content=models.TextField()
+    is_hidden=models.BooleanField(default=False)
 class Comment(TimeStamped):
     author=models.ForeignKey(User,on_delete=models.CASCADE)
     post=models.ForeignKey(Post,on_delete=models.CASCADE,related_name='comments')
@@ -22,6 +23,7 @@ class Question(TimeStamped):
     title=models.CharField(max_length=200)
     body=models.TextField()
     tags=models.JSONField(default=list,blank=True)
+    is_hidden=models.BooleanField(default=False)
     accepted_answer=models.ForeignKey('Answer',null=True,blank=True,on_delete=models.SET_NULL,related_name='+')
 class Answer(TimeStamped):
     author=models.ForeignKey(User,on_delete=models.CASCADE)

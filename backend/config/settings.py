@@ -54,3 +54,20 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Phase 9 : durcissement des sessions et limitation des abus.
+SESSION_COOKIE_AGE = 60 * 60 * 24
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SECURE_REFERRER_POLICY = 'same-origin'
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+    'rest_framework.throttling.AnonRateThrottle',
+    'rest_framework.throttling.UserRateThrottle',
+]
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {'anon': '60/min', 'user': '180/min', 'login': '10/min', 'register': '5/hour'}
+if not DEBUG:
+    if SECRET_KEY == 'dev-only-change-me':
+        raise RuntimeError('Définir DJANGO_SECRET_KEY avant le déploiement.')
+    SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'true').lower() == 'true'
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False  # Activer seulement après vérification du domaine
